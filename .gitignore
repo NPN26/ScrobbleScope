@@ -4,8 +4,8 @@ __pycache__/
 *.pyc
 
 # Raw Spotify data exports (not used by the pipeline)
-*.json
-*.csv
+/*.json
+/*.csv
 
 # Notebooks & testing scripts
 *.ipynb
