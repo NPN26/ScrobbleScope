@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Raw Spotify data exports (not used by the pipeline)
+*.json
+*.csv
+
+# Notebooks & testing scripts
+*.ipynb
+backfill_albums.py
+enrich.py
+enrich_metadata.py
+music.py
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
