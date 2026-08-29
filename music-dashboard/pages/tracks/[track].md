@@ -49,6 +49,7 @@ from music.scrobbles s
 join music.tracks t on t.id = s.track_id
 where t.id = '${params.track}'
 group by date_trunc('day', s.ts_local), t.name
+order by date_trunc('day', s.ts_local) desc
 ```
 
 ```sql track_total_listen_time
@@ -102,6 +103,41 @@ join music.tracks t on t.id = s.track_id
 where t.id = '${params.track}'
 group by hour
 order by hour
+```
+
+```sql day_of_week
+select
+    day_of_week,
+    count(*) as plays
+from music.scrobbles s
+join music.tracks t on t.id = s.track_id
+where t.id = '${params.track}'
+group by day_of_week
+order by case LOWER(TRIM(day_of_week))
+    when 'monday' then 1
+    when 'tuesday' then 2
+    when 'wednesday' then 3
+    when 'thursday' then 4
+    when 'friday' then 5
+    when 'saturday' then 6
+    when 'sunday' then 7
+    else 8 
+end;
+```
+
+```sql album_summary
+select 
+    t.name as track,
+    count(*) as plays,
+    sum(count(*)) over () as total_album_plays,
+    (count(*)::decimal / sum(count(*)) over ()) as pct_of_album
+from music.scrobbles s
+join music.tracks t on t.id = s.track_id
+where t.album_name = (select album_name from music.tracks where id = '${params.track}')
+  and t.artist_id = (select artist_id from music.tracks where id = '${params.track}')
+group by t.name
+order by plays desc
+limit 10
 ```
 
 <BigValue title="Artist" data={track_details} value="artist" />
@@ -180,6 +216,27 @@ order by hour
     },
     animation: false
   }}
+/>
+
+<BarChart
+    data={day_of_week}
+    x=day_of_week
+    y=plays
+    sort=false
+/>
+
+<CalendarHeatmap
+    data={track_scrobbles_by_day}
+    date=day
+    value=scrobbles
+/>
+
+<BarChart 
+    data={album_summary} 
+    x="track" 
+    y="plays" 
+    title="How this track compares to the rest of the Album" 
+    labels=true 
 />
 
 <DataTable data={similar_tracks} title="Similar Tracks" link=track_url>

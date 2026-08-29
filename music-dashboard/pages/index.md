@@ -44,7 +44,7 @@ This page can be found in your project at `/pages/index.md`. Make a change to th
                 }
             );
             if (resp.status === 204) {
-                message = "✅ Build triggered! Dashboard will update in ~3-5 minutes. Check progress on the Actions tab.";
+                message = "✅ Build triggered! Dashboard will update in ~20 minutes. Check progress on the Actions tab.";
                 messageType = "success";
             } else if (resp.status === 401 || resp.status === 403) {
                 localStorage.removeItem('gh_pat');
@@ -64,7 +64,7 @@ This page can be found in your project at `/pages/index.md`. Make a change to th
 
 <div style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #eaeaea; border-radius: 8px; background-color: var(--grey-50);">
     <h3 style="margin-top: 0;">🔄 Data Sync</h3>
-    <p style="margin-bottom: 1rem;">Pull latest scrobbles from Last.fm and rebuild the dashboard. Takes ~3-5 minutes.</p>
+    <p style="margin-bottom: 1rem;">Pull latest scrobbles from Last.fm and rebuild the dashboard. Takes ~20 minutes.</p>
     <button
         on:click={handleRefresh}
         disabled={loading}
