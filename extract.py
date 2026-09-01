@@ -132,7 +132,7 @@ def get_scrobbles(username, from_ts=None, to_ts=None):
             all_scrobbles.append({
                 "artist": clean_artist,
                 "track": clean_track,
-                "album": clean_album,  # NEW: Store the album name here
+                "album": clean_album,
                 "timestamp": timestamp,
                 "is_loved": is_loved
             })

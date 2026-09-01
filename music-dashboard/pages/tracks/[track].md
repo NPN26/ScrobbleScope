@@ -9,34 +9,46 @@ select
 
 ```sql track_details
 select 
-    t.name,
-    a.name as artist,
-    t.album_name as album,
-    t.global_playcount,
-    t.duration_ms / 1000 / 60 / 60 / 24 as duration,
-    (count(*)::decimal / t.global_playcount) as pct_global_plays
-from music.scrobbles s
-join music.tracks t on t.id = s.track_id
-join music.artists a on t.artist_id = a.id 
-where t.id = '${params.track}'
-group by t.name, a.name, t.album_name, t.global_playcount, t.duration_ms
+    id,
+    name,
+    artist,
+    album,
+    global_playcount,
+    duration,
+    pct_global_plays,
+    scrobbles,
+    first_scrobble,
+    last_scrobble,
+    scrobbles_last_week,
+    scrobbles_last_month,
+    scrobbles_last_quarter,
+    scrobbles_last_half_year,
+    scrobbles_last_year,
+from music.track_details
+where id = cast('${params.track}' as integer)
 ```
 
-```sql track_scrobbles_counts
-select
-    t.name as track,
-    count(*) as scrobbles,
-    min(s.ts_local) as first_scrobble,
-    max(s.ts_local) as last_scrobble,
-    COUNT(*) FILTER (WHERE s.ts_local >= (now() at time zone 'Asia/Dubai') - interval '7 day') as scrobbles_last_week,
-    COUNT(*) FILTER (WHERE s.ts_local >= (now() at time zone 'Asia/Dubai') - interval '1 month') as scrobbles_last_month,
-    COUNT(*) FILTER (WHERE s.ts_local >= (now() at time zone 'Asia/Dubai') - interval '3 month') as scrobbles_last_quarter,
-    COUNT(*) FILTER (WHERE s.ts_local >= (now() at time zone 'Asia/Dubai') - interval '6 month') as scrobbles_last_half_year,
-    COUNT(*) FILTER (WHERE s.ts_local >= (now() at time zone 'Asia/Dubai') - interval '1 year') as scrobbles_last_year,
-from music.scrobbles s
-join music.tracks t on t.id = s.track_id
-where t.id = '${params.track}'
-group by t.name
+```sql track_rank
+select 
+    id,
+    play_count_4w,
+    prev_play_count_4w,
+    play_count_6m,
+    prev_play_count_6m,
+    rank_4w,
+    prev_rank_4w,
+    rank_6m,
+    prev_rank_6m,
+    play_delta_4w,
+    play_delta_6m,
+    rank_delta_4w,
+    rank_delta_6m,
+    rank_status_4w,
+    rank_status_6m,
+    has_rank_delta_4w,
+    has_rank_delta_6m
+from music.track_ranks
+where id = cast('${params.track}' as integer)
 ```
 
 ```sql track_scrobbles_by_day
@@ -47,17 +59,9 @@ select
     count(*) as scrobbles
 from music.scrobbles s
 join music.tracks t on t.id = s.track_id
-where t.id = '${params.track}'
+where t.id = cast('${params.track}' as integer)
 group by date_trunc('day', s.ts_local), t.name
 order by date_trunc('day', s.ts_local) desc
-```
-
-```sql track_total_listen_time
-select
-    s.scrobbles * t.duration_ms / 1000 / 60  as total_listen_time_min,
-    s.scrobbles * t.duration_ms / 1000 / 60 / 60 / 24  as total_listen_time_days
-from ${track_scrobbles_counts} s
-join music.tracks t on t.name = s.track
 ```
 
 ```sql similar_tracks
@@ -100,7 +104,7 @@ select
     count(*) as plays
 from music.scrobbles s
 join music.tracks t on t.id = s.track_id
-where t.id = '${params.track}'
+where t.id = cast('${params.track}' as integer)
 group by hour
 order by hour
 ```
@@ -111,7 +115,7 @@ select
     count(*) as plays
 from music.scrobbles s
 join music.tracks t on t.id = s.track_id
-where t.id = '${params.track}'
+where t.id = cast('${params.track}' as integer)
 group by day_of_week
 order by case LOWER(TRIM(day_of_week))
     when 'monday' then 1
@@ -133,8 +137,9 @@ select
     (count(*)::decimal / sum(count(*)) over ()) as pct_of_album
 from music.scrobbles s
 join music.tracks t on t.id = s.track_id
-where t.album_name = (select album_name from music.tracks where id = '${params.track}')
-  and t.artist_id = (select artist_id from music.tracks where id = '${params.track}')
+where t.id = cast('${params.track}' as integer)
+  and t.album_name = (select album_name from music.tracks where id = cast('${params.track}' as integer))
+  and t.artist_id = (select artist_id from music.tracks where id = cast('${params.track}' as integer))
 group by t.name
 order by plays desc
 limit 10
@@ -150,47 +155,129 @@ limit 10
 
 <BigValue title="Pct of Global Plays" data={track_details} value="pct_global_plays" fmt="0.00%" />
 
-<br />
-
 <BigValue title="Duration" data={track_details} value="duration" fmt="mm:ss" />
 
-{#if track_scrobbles_counts[0].scrobbles_last_week > 0}
-<BigValue title="Scrobbles" data={track_scrobbles_counts} value="scrobbles" comparison=scrobbles_last_week comparisonTitle=" Scrobbles over Last Week" comparisonDelta=false/>
+{#if track_details[0].scrobbles_last_week > 0}
+<BigValue title="Scrobbles" data={track_details} value="scrobbles" comparison=scrobbles_last_week comparisonTitle=" Scrobbles over Last Week" comparisonDelta=false/>
 
-{:else if track_scrobbles_counts[0].scrobbles_last_month > 0}
-<BigValue title="Scrobbles" data={track_scrobbles_counts} value="scrobbles" comparison=scrobbles_last_month comparisonTitle=" Scrobbles over Last Month" comparisonDelta=false/>
+{:else if track_details[0].scrobbles_last_month > 0}
+<BigValue title="Scrobbles" data={track_details} value="scrobbles" comparison=scrobbles_last_month comparisonTitle=" Scrobbles over Last Month" comparisonDelta=false/>
 
-{:else if track_scrobbles_counts[0].scrobbles_last_quarter > 0}
-<BigValue title="Scrobbles" data={track_scrobbles_counts} value="scrobbles" comparison=scrobbles_last_quarter comparisonTitle=" Scrobbles over Last 3 months" comparisonDelta=false/>
+{:else if track_details[0].scrobbles_last_quarter > 0}
+<BigValue title="Scrobbles" data={track_details} value="scrobbles" comparison=scrobbles_last_quarter comparisonTitle=" Scrobbles over Last 3 months" comparisonDelta=false/>
 
-{:else if track_scrobbles_counts[0].scrobbles_last_half_year > 0}
-<BigValue title="Scrobbles" data={track_scrobbles_counts} value="scrobbles" comparison=scrobbles_last_half_year comparisonTitle=" Scrobbles over Last Half Year" comparisonDelta=false/>
+{:else if track_details[0].scrobbles_last_half_year > 0}
+<BigValue title="Scrobbles" data={track_details} value="scrobbles" comparison=scrobbles_last_half_year comparisonTitle=" Scrobbles over Last Half Year" comparisonDelta=false/>
  
-{:else if track_scrobbles_counts[0].scrobbles_last_year > 0}
-<BigValue title="Scrobbles" data={track_scrobbles_counts} value="scrobbles" comparison=scrobbles_last_year comparisonTitle=" Scrobbles over Last Year" comparisonDelta=false/>
+{:else if track_details[0].scrobbles_last_year > 0}
+<BigValue title="Scrobbles" data={track_details} value="scrobbles" comparison=scrobbles_last_year comparisonTitle=" Scrobbles over Last Year" comparisonDelta=false/>
 
 {:else}
-<BigValue title="Scrobbles" data={track_scrobbles_counts} value="scrobbles" />
+<BigValue title="Scrobbles" data={track_details} value="scrobbles" />
 
 {/if}
 
 <br />
 
-<BigValue title="First Scrobble" data={track_scrobbles_counts} value="first_scrobble" fmt="dddd, d mmmm yyyy" />
+{#if track_rank.length > 0}
 
-<BigValue title="Last Scrobble" data={track_scrobbles_counts} value="last_scrobble" fmt="dddd, d mmmm yyyy" />
+  <BigValue
+    title="Plays (4 weeks)"
+    data={track_rank}
+    value="play_count_4w"
+    comparison="play_delta_4w"
+    comparisonTitle="vs previous 4 weeks"
+    comparisonDelta=true
+    fmt="0,0"
+  />
+
+  {#if track_rank[0]?.rank_4w != null}
+    {#if track_rank[0]?.has_rank_delta_4w}
+      <BigValue
+        title="Rank (4 weeks)"
+        data={track_rank}
+        value="rank_4w"
+        comparison="rank_delta_4w"
+        comparisonTitle="positions vs previous 4 weeks"
+        comparisonDelta=true
+        fmt="0,0"
+      />
+    {:else}
+      <BigValue
+        title="Rank (4 weeks)"
+        data={track_rank}
+        value="rank_4w"
+        comparison="rank_status_4w"
+        comparisonTitle=""
+        comparisonDelta=false
+        fmt="0,0"
+      />
+    {/if}
+  {:else}
+    <BigValue
+      title="Rank (4 weeks)"
+      data={track_rank}
+      value="rank_status_4w"
+    />
+  {/if}
+
+  <BigValue
+    title="Plays (6 months)"
+    data={track_rank}
+    value="play_count_6m"
+    comparison="play_delta_6m"
+    comparisonTitle="vs previous 6 months"
+    comparisonDelta=true
+    fmt="0,0"
+  />
+
+  {#if track_rank[0]?.rank_6m != null}
+    {#if track_rank[0]?.has_rank_delta_6m}
+      <BigValue
+        title="Rank (6 months)"
+        data={track_rank}
+        value="rank_6m"
+        comparison="rank_delta_6m"
+        comparisonTitle="positions vs previous 6 months"
+        comparisonDelta=true
+        fmt="0,0"
+      />
+    {:else}
+      <BigValue
+        title="Rank (6 months)"
+        data={track_rank}
+        value="rank_6m"
+        comparison="rank_status_6m"
+        comparisonTitle=""
+        comparisonDelta=false
+        fmt="0,0"
+      />
+    {/if}
+  {:else}
+    <BigValue
+      title="Rank (6 months)"
+      data={track_rank}
+      value="rank_status_6m"
+    />
+  {/if}
+
+{/if}
+
+<BigValue title="First Scrobble" data={track_details} value="first_scrobble" fmt="dddd, d mmmm yyyy" />
+
+<BigValue title="Last Scrobble" data={track_details} value="last_scrobble" fmt="dddd, d mmmm yyyy" />
 
 <LineChart data={track_scrobbles_by_day} x=day y=accum_scrobbles y2=scrobbles title="Scrobbles by Day">
     <ReferenceLine data={date_ranges} x=last_week fontSize=10 labelBackground=false 
-    label={'Last Week (' + (track_scrobbles_counts[0]?.scrobbles_last_week ?? 0) + ' plays)'} hideValue />
+    label={'Last Week (' + (track_details[0]?.scrobbles_last_week ?? 0) + ' plays)'} hideValue />
     <ReferenceLine data={date_ranges} x=last_month fontSize=10      
-    label={'Last Month (' + (track_scrobbles_counts[0]?.scrobbles_last_month ?? 0) + ' plays)'} hideValue />
+    label={'Last Month (' + (track_details[0]?.scrobbles_last_month ?? 0) + ' plays)'} hideValue />
     <ReferenceLine data={date_ranges} x=last_quarter fontSize=10
-    label={'Last Quarter (' + (track_scrobbles_counts[0]?.scrobbles_last_quarter ?? 0) + ' plays)'} hideValue />
+    label={'Last Quarter (' + (track_details[0]?.scrobbles_last_quarter ?? 0) + ' plays)'} hideValue />
     <ReferenceLine data={date_ranges} x=last_half_year fontSize=10
-    label={'Last Half Year (' + (track_scrobbles_counts[0]?.scrobbles_last_half_year ?? 0) + ' plays)'} hideValue />
+    label={'Last Half Year (' + (track_details[0]?.scrobbles_last_half_year ?? 0) + ' plays)'} hideValue />
     <ReferenceLine data={date_ranges} x=last_year fontSize=10
-    label={'Last Year (' + (track_scrobbles_counts[0]?.scrobbles_last_year ?? 0) + ' plays)'} hideValue />
+    label={'Last Year (' + (track_details[0]?.scrobbles_last_year ?? 0) + ' plays)'} hideValue />
 </LineChart>
 
 <ECharts
@@ -238,7 +325,8 @@ limit 10
     title="How this track compares to the rest of the Album" 
     labels=true 
 />
-
+{#if similar_tracks.length > 0}
 <DataTable data={similar_tracks} title="Similar Tracks" link=track_url>
     <Column id="track" title="Track" />
 </DataTable>
+{/if}
