@@ -30,6 +30,21 @@ Calendar heatmaps expose seasonality and listening consistency at a glance. The 
 
 [Open the live dashboard →](https://npn26.github.io/Spotify-Streaming-History-Analysis/)
 
+### Track-level exploration
+
+The [`Tracks` page](https://npn26.github.io/Spotify-Streaming-History-Analysis/tracks/) turns the ranked catalog into a drill-down experience. Visitors can search and paginate through all tracks, then open a track detail view with metadata, lifetime scrobbles, recent-period play counts and rank movement, first/last scrobble dates, daily history, hourly listening patterns, album context, and similar tracks.
+
+![Track detail page with recent-period rankings, listening history, and polar hourly chart](docs/assets/track-detail.png)
+
+The track page is powered by two dedicated SQL models:
+
+| SQL model | Responsibility |
+| --- | --- |
+| [`track_details.sql`](music-dashboard/sources/music/track_details.sql) | Calculates the selected track’s metadata and lifetime/recent scrobble metrics used by the detail header and KPI cards. |
+| [`track_ranks.sql`](music-dashboard/sources/music/track_ranks.sql) | Compares the track across the last four weeks and six months, calculating play-count deltas, ranks, rank movement, and statuses such as `new entry`, `improved`, or `declined`. |
+
+Together, these models keep the page’s business logic in SQL while the Evidence page focuses on presenting the resulting metrics and visual analyses.
+
 ## Architecture
 
 The system is designed as a small, reproducible data product with the repository acting as both source code and the versioned data handoff between the ingestion and publishing stages.
@@ -75,10 +90,10 @@ The dashboard is built for exploratory questions rather than a single static rep
 | [`lastfm.py`](lastfm.py) | Last.fm API request helper |
 | [`music-dashboard/pages/index.md`](music-dashboard/pages/index.md) | Main Evidence dashboard page and analytical SQL |
 | [`music-dashboard/pages/tracks/[track].md`](music-dashboard/pages/tracks/[track].md) | Track-level detail page |
-| [`music-dashboard/sources/music/`](music-dashboard/sources/music/) | DuckDB source and Evidence query definitions |
+| [`music-dashboard/sources/music/`](music-dashboard/sources/music/) | DuckDB source and Evidence query definitions, including the track detail/ranking models |
 | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Automated refresh, build, and GitHub Pages deployment |
 | [`music_analysis.ipynb`](music_analysis.ipynb) | Original exploratory notebook for Spotify export analysis |
-| [`docs/assets/`](docs/assets/) | README dashboard screenshots |
+| [`docs/assets/`](docs/assets/) | README dashboard screenshots for the overview, heatmaps, and Tracks page |
 
 ## Run it locally
 
