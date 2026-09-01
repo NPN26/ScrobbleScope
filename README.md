@@ -1,60 +1,124 @@
-# Spotify Extended Streaming History Analysis
+# Spotify Streaming History Analysis
 
-This project contains my personal Spotify extended streaming history exports (audio + video) and a Jupyter notebook used to combine and analyze the data.
+> An automated analytics dashboard that turns personal Last.fm listening history into an interactive, queryable music intelligence product.
 
-## Project Contents
+<p align="center">
+  <a href="https://npn26.github.io/Spotify-Streaming-History-Analysis/">Live dashboard</a> ·
+  <a href="https://github.com/NPN26/Spotify-Streaming-History-Analysis/actions">Build history</a> ·
+  <a href="music-dashboard/pages/index.md">Dashboard source</a>
+</p>
 
-- `music_analysis.ipynb`: Main notebook for loading, combining, and analyzing streaming history.
-- `Streaming_History_Audio_2019-2021_0.json` ... `Streaming_History_Audio_2025_10.json`: Raw Spotify audio history exports split across date ranges.
-- `Streaming_History_Video_2024-2025.json`: Raw Spotify video history export.
-- `Streaming_History_Audio.csv`: Combined audio history generated from the notebook.
+## Why this project stands out
 
-## Data Format
+This project is more than a one-off notebook. It is an end-to-end analytics workflow: Last.fm data is fetched incrementally, normalized into a relational DuckDB warehouse, transformed through SQL, and published as an interactive Evidence dashboard through GitHub Actions.
 
-Each stream record includes fields such as:
+The result is a self-updating product for exploring **189K+ scrobbles**, **1K+ artists**, listening volume over time, top tracks and albums, hourly listening behavior, and year-level trends. The figures shown below are captured from the deployed dashboard and will change as new scrobbles are ingested.
 
-- `ts`: Timestamp of the stream event.
-- `platform`: Device/OS where playback happened.
-- `ms_played`: Milliseconds played.
-- `master_metadata_track_name`: Track title.
-- `master_metadata_album_artist_name`: Artist name.
-- `master_metadata_album_album_name`: Album name.
-- `spotify_track_uri`: Spotify URI for the track.
-- `reason_start` / `reason_end`: Playback start/end reasons.
-- `shuffle`, `skipped`, `offline`, `incognito_mode`: Playback behavior flags.
+## Dashboard preview
 
-Some podcast/audiobook fields are present in Spotify exports and may be null for music streams.
+### Overview and polar listening profile
 
-## Workflow
+The dashboard combines headline KPIs with ranked artists, tracks, and albums. The polar bar chart makes the distribution of listening across the 24 hours of the day immediately legible while preserving a compact, presentation-ready visual form.
 
-1. Load all audio JSON files in `music_analysis.ipynb`.
-2. Concatenate into one dataframe.
-3. Convert timestamps to local timezone (`Asia/Dubai`).
-4. Export merged data to `Streaming_History_Audio.csv`.
-5. Run analysis/visualization cells for listening insights.
+![Dashboard overview with KPIs, rankings, and the polar chart](docs/assets/dashboard-overview.png)
 
-## Setup
+### Calendar heatmaps
 
-Use Python 3.10+ (recommended) and install:
+Calendar heatmaps expose seasonality and listening consistency at a glance. The dashboard includes both **scrobbles by day** and **listening time by day**, with year filters for drilling into individual periods.
 
-```bash
-pip install pandas numpy matplotlib seaborn jupyter
+![Dashboard calendar heatmaps for scrobbles and listening time](docs/assets/dashboard-heatmaps.png)
+
+[Open the live dashboard →](https://npn26.github.io/Spotify-Streaming-History-Analysis/)
+
+## Architecture
+
+The system is designed as a small, reproducible data product with the repository acting as both source code and the versioned data handoff between the ingestion and publishing stages.
+
+```mermaid
+flowchart LR
+    A[Last.fm API\nuser.getRecentTracks] --> B[GitHub Actions\nworkflow: deploy.yml]
+    B --> C[extract.py\nincremental fetch + retries]
+    C --> D[(DuckDB warehouse\nartists · tracks · scrobbles)]
+    D --> E[Evidence sources\nSQL transformations]
+    E --> F[Evidence build\nstatic site]
+    F --> G[GitHub Pages\npublic dashboard]
 ```
 
-Then open:
+### How an update works
+
+1. A push to `main` or a manual workflow dispatch starts `.github/workflows/deploy.yml`.
+2. The workflow installs Python dependencies and runs `python extract.py NP26` with `LASTFM_API_KEY` supplied through GitHub Secrets.
+3. `extract.py` reads the latest stored scrobble timestamp from DuckDB and requests only the newer Last.fm history. The API client uses pagination, rate-limit spacing, and retry logic so transient Last.fm failures do not silently invalidate the refresh.
+4. New artists and tracks are resolved into dimension tables. Track metadata such as album, duration, and global playcount is enriched through `track.getInfo`; duplicate artists, tracks, and scrobbles are protected by database uniqueness constraints.
+5. New listening events are inserted into `music-dashboard/sources/music/warehouse.duckdb`. The workflow commits the changed warehouse back to the repository when there is a data change.
+6. Evidence runs its source queries against DuckDB, builds the static dashboard, uploads the build artifact, and deploys it to GitHub Pages.
+
+This separation keeps ingestion, storage, analytical SQL, and presentation independently understandable while allowing the complete refresh to run from a clean GitHub-hosted runner.
+
+## Data model
+
+| Table | Purpose | Key fields |
+| --- | --- | --- |
+| `artists` | Deduplicated artist dimension | `id`, `name` |
+| `tracks` | Track-level metadata linked to artists | `id`, `artist_id`, `name`, `album_name`, `duration_ms`, `global_playcount` |
+| `scrobbles` | Timestamped listening events | `id`, `track_id`, `timestamp`, `is_loved` |
+
+## What the dashboard answers
+
+The dashboard is built for exploratory questions rather than a single static report. It surfaces total scrobbles, unique artists, total listening time, top artists, albums, tracks, peak listening days, weekly trends, hourly patterns, annual rankings, and calendar-level activity. The year selector allows the same metrics and visualizations to be compared across listening eras.
+
+## Repository map
+
+| Path | Role |
+| --- | --- |
+| [`extract.py`](extract.py) | Incremental Last.fm ingestion, metadata enrichment, and DuckDB writes |
+| [`lastfm.py`](lastfm.py) | Last.fm API request helper |
+| [`music-dashboard/pages/index.md`](music-dashboard/pages/index.md) | Main Evidence dashboard page and analytical SQL |
+| [`music-dashboard/pages/tracks/[track].md`](music-dashboard/pages/tracks/[track].md) | Track-level detail page |
+| [`music-dashboard/sources/music/`](music-dashboard/sources/music/) | DuckDB source and Evidence query definitions |
+| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Automated refresh, build, and GitHub Pages deployment |
+| [`music_analysis.ipynb`](music_analysis.ipynb) | Original exploratory notebook for Spotify export analysis |
+| [`docs/assets/`](docs/assets/) | README dashboard screenshots |
+
+## Run it locally
+
+The automated dashboard build requires Python, Node.js, DuckDB, and the Evidence CLI dependencies.
 
 ```bash
-jupyter notebook music_analysis.ipynb
+git clone https://github.com/NPN26/Spotify-Streaming-History-Analysis.git
+cd Spotify-Streaming-History-Analysis
+
+# Install ingestion dependencies
+pip install -r requirements.txt
+
+# Install dashboard dependencies
+cd music-dashboard
+npm install
+npm run sources
+npm run dev
 ```
 
-## Privacy Note
+To refresh data locally, provide a Last.fm API key and run the extractor with a Last.fm username:
 
-These files include the personal listening history of the owner and contains sensitive metadata (timestamps, IP addresses, country, device info). Avoid sharing or publishing the raw data without consent.
+```bash
+export LASTFM_API_KEY="your-lastfm-api-key"
+cd ..
+python extract.py NP26
+```
 
-## Possible Future Analysis Ideas
+The dashboard is intentionally published as a static site, so the public experience does not require a running backend. The **Update Data** control in the dashboard triggers the GitHub Actions workflow through the GitHub API and is intended for authorized repository users.
 
-- Top artists/tracks by total listening time.
-- Listening trends by month, day, and hour.
-- Skip-rate analysis by artist or track.
-- Platform/device usage patterns.
-- Shuffle vs non-shuffle listening behavior.
+## Privacy
+
+Listening history can contain sensitive behavioral metadata. The raw warehouse and exported history are personal data; review the repository visibility, GitHub Pages settings, and API secrets before adapting this workflow for another account.
+
+## References
+
+[1]: https://www.last.fm/api/show/user.getRecentTracks "Last.fm user.getRecentTracks API"
+[2]: https://www.last.fm/api/show/track.getInfo "Last.fm track.getInfo API"
+[3]: https://docs.github.com/en/actions "GitHub Actions documentation"
+[4]: https://duckdb.org/docs/ "DuckDB documentation"
+[5]: https://docs.evidence.dev/ "Evidence documentation"
+[6]: https://docs.github.com/en/pages "GitHub Pages documentation"
+
+The implementation uses the Last.fm endpoints, GitHub Actions, DuckDB, Evidence, and GitHub Pages described in the linked documentation.[1] [2] [3] [4] [5] [6]
