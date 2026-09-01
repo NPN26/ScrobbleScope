@@ -8,9 +8,9 @@
   <a href="music-dashboard/pages/index.md">Dashboard source</a>
 </p>
 
-## Why this project stands out
+## What this project is About
 
-This project is more than a one-off notebook. It is an end-to-end analytics workflow: Last.fm data is fetched incrementally, normalized into a relational DuckDB warehouse, transformed through SQL, and published as an interactive Evidence dashboard through GitHub Actions.
+This project is an end-to-end analytics workflow: Last.fm data is fetched incrementally, normalized into a relational DuckDB warehouse, transformed through SQL, and published as an interactive Evidence dashboard through GitHub Actions.
 
 The result is a self-updating product for exploring **189K+ scrobbles**, **1K+ artists**, listening volume over time, top tracks and albums, hourly listening behavior, and year-level trends. The figures shown below are captured from the deployed dashboard and will change as new scrobbles are ingested.
 
@@ -49,15 +49,7 @@ Together, these models keep the page’s business logic in SQL while the Evidenc
 
 The system is designed as a small, reproducible data product with the repository acting as both source code and the versioned data handoff between the ingestion and publishing stages.
 
-```mermaid
-flowchart LR
-    A[Last.fm API\nuser.getRecentTracks] --> B[GitHub Actions\nworkflow: deploy.yml]
-    B --> C[extract.py\nincremental fetch + retries]
-    C --> D[(DuckDB warehouse\nartists · tracks · scrobbles)]
-    D --> E[Evidence sources\nSQL transformations]
-    E --> F[Evidence build\nstatic site]
-    F --> G[GitHub Pages\npublic dashboard]
-```
+![Architecture diagram showing the flow from Last.fm to DuckDB to Evidence to GitHub Pages](docs/assets/architecture.png)
 
 ### How an update works
 

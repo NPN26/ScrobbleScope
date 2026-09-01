@@ -57,7 +57,7 @@ description: A dashboard to visualize my music listening history and statistics.
     }
 </script>
 
-<div style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #737272; border-radius: 8px; background-color: var(--grey-900);">
+<div style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #737272; border-radius: 8px; background-color: var(--grey);">
     <h3 style="margin-top: 0;">🔄 Data Sync</h3>
     <p style="margin-bottom: 1rem;">Pull latest scrobbles from Last.fm and rebuild the dashboard. Takes ~20 minutes.</p>
     <button
