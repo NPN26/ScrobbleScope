@@ -1,12 +1,7 @@
 ---
-title: Welcome to Evidence
+title: Welcome to my Music Dashboard
+description: A dashboard to visualize my music listening history and statistics.
 ---
-
-<Details title='How to edit this page'>
-
-This page can be found in your project at `/pages/index.md`. Make a change to the markdown file and save it to see the change take effect in your browser.
-
-</Details>
 
 <script>
     let loading = false;
@@ -62,7 +57,7 @@ This page can be found in your project at `/pages/index.md`. Make a change to th
     }
 </script>
 
-<div style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #eaeaea; border-radius: 8px; background-color: var(--grey-50);">
+<div style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #737272; border-radius: 8px; background-color: var(--grey-900);">
     <h3 style="margin-top: 0;">🔄 Data Sync</h3>
     <p style="margin-bottom: 1rem;">Pull latest scrobbles from Last.fm and rebuild the dashboard. Takes ~20 minutes.</p>
     <button
@@ -131,7 +126,6 @@ limit 10
         scrobbles
     from ${artists_scrobbles_counts}
     order by scrobbles desc
-    limit 1
 ```
 
 ```sql album_scrobbles_counts
@@ -151,7 +145,6 @@ limit 10
         scrobbles
     from ${album_scrobbles_counts}
     order by scrobbles desc
-    limit 1
 ```
 
 ```sql track_scrobbles_counts
@@ -170,7 +163,6 @@ limit 10
         scrobbles
     from ${track_scrobbles_counts}
     order by scrobbles desc
-    limit 1
 ```
 
 ```sql daily_scrobbles
@@ -191,50 +183,10 @@ limit 10
     limit 1
 ```
 
-<BigValue title="Top Artist" data={top_artist} value=artist comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
-<BigValue title="Top Album" data={top_album} value=album comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
-<BigValue title="Top Track" data={top_track} value=track comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
+<BigValue title="Top Artist" data={top_artist.limit(1)} value=artist comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
+<BigValue title="Top Album" data={top_album.limit(1)} value=album comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
+<BigValue title="Top Track" data={top_track.limit(1)} value=track comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
 <BigValue title="Top Scrobbles Day" data={top_scrobbles_day} value=day comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
-
-```sql top_20_artists_scrobbles
-    select
-        artist,
-        scrobbles
-    from ${artists_scrobbles_counts}
-    order by scrobbles desc
-    limit 10
-```
-
-<BarChart data={top_20_artists_scrobbles} x=artist y=scrobbles title="Top 20 Artists by Scrobbles" labels=true swapXY=true sort=True labelFmt="num1k" />
-
-```sql available_years
-  select distinct extract(year from ts_local) as year
-  from music.scrobbles
-  order by year desc
-```
-
-<Dropdown data={available_years} name=year value=year>
-</Dropdown>
-
-```sql top_artists_by_year
-    select
-        a.name as artist,
-        count(s.id) as scrobbles
-    from music.scrobbles s
-    join music.tracks t on s.track_id = t.id
-    join music.artists a on t.artist_id = a.id
-    where extract(year from s.ts_local) = ${inputs.year.value}
-    group by a.name
-    order by scrobbles desc
-    limit 10
-```
-
-<BarChart
-    data={top_artists_by_year}
-    title="Top Artists by Year"
-    x=artist
-    y=scrobbles
-/>
 
 ```sql hour_of_day
 SELECT
@@ -250,8 +202,6 @@ LEFT JOIN music.scrobbles s ON EXTRACT(HOUR FROM s.ts_local) = h.hour
 GROUP BY hour
 ORDER BY h.hour
 ```
-
-<BarChart data={hour_of_day} x=hour y=plays title="What time do I listen to music?" labels=true xType="category" sort=false />
 
 <ECharts
   config={{
@@ -284,28 +234,159 @@ SELECT
     avg(count(*)) over (
         order by week
         ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
-    ) as plays
-from music.scrobbles s
-group by week
-order by week
-```
-
-<LineChart data={weekly_scrobbles} x=week y=plays title="Weekly Scrobbles" labels=false sort=false />
-
-```sql weekly_scrobbles_time
-SELECT
-    date_trunc('week', ts_local) as week,
-    avg(sum(t.duration_ms/1000/60/60/24)) over (
+    ) as plays,
+    avg(sum(t.duration_ms/1000/60/60)) over (
         order by week
         ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
-    ) as daily_hours
+    ) as hours
 from music.scrobbles s
 join music.tracks t on s.track_id = t.id
 group by week
 order by week
 ```
 
-<LineChart data={weekly_scrobbles_time} x=week y=daily_hours title="Weekly Listening Time" labels=false sort=false />
+<LineChart data={weekly_scrobbles} x=week y=plays y2=hours title="Weekly Scrobbles" labels=false sort=false />
+
+```sql available_years
+  select distinct extract(year from ts_local) as year
+  from music.scrobbles
+  order by year desc
+```
+
+<Dropdown 
+    data={available_years} 
+    name=year 
+    value=year 
+    multiple=true
+    selectAllByDefault=true
+    order= "year desc">
+</Dropdown>
+
+```sql total_scrobbles_by_year
+  select count(*) as total_scrobbles
+  from music.scrobbles
+  where extract(year from ts_local) in ${inputs.year.value}
+```
+
+```sql total_artists_by_year
+  select count(distinct a.id) as total_artists
+  from music.scrobbles s
+  join music.tracks t on s.track_id = t.id
+  join music.artists a on t.artist_id = a.id
+  where extract(year from s.ts_local) in ${inputs.year.value}
+```
+
+```sql total_time_by_year
+  select sum(t.duration_ms)/1000/60 as total_time
+  from music.scrobbles s
+  join music.tracks t on s.track_id = t.id
+  where extract(year from s.ts_local) in ${inputs.year.value}
+```
+
+```sql avg_counts_per_day
+  select avg(daily_counts.scrobbles) as avg_counts
+  from (
+      select count(*) as scrobbles
+      from music.scrobbles
+      where extract(year from ts_local) in ${inputs.year.value}
+      group by date_trunc('day', ts_local)
+  ) as daily_counts
+```
+
+```sql avg_daily_time
+  select avg(daily_time.total_time) as avg_time
+  from (
+      select sum(t.duration_ms)/1000/60/60 as total_time
+      from music.scrobbles s
+      join music.tracks t on s.track_id = t.id
+      where extract(year from s.ts_local) in ${inputs.year.value}
+      group by date_trunc('day', s.ts_local)
+  ) as daily_time
+```
+
+```sql top_scrobbles_day_by_year
+    select
+        date_trunc('day', ts_local) as day,
+        count(*) as scrobbles
+    from music.scrobbles
+    where extract(year from ts_local) in ${inputs.year.value}
+    group by day
+    order by scrobbles desc
+    limit 1
+```
+
+
+  <BigValue title="Total Scrobbles (Selected)" data={total_scrobbles_by_year} value=total_scrobbles />
+  <BigValue title="Total Artists (Selected)" data={total_artists_by_year} value=total_artists />
+  <BigValue title="Total Time (min)" data={total_time_by_year} value=total_time />
+  <br />
+  <BigValue title="Avg Counts per Day" data={avg_counts_per_day} value=avg_counts fmt="num1" />
+  <BigValue title="Avg Daily Time (hours)" data={avg_daily_time} value=avg_time fmt="num1" />
+  <BigValue title="Top Scrobbles Day" data={top_scrobbles_day_by_year} value=day comparison=scrobbles comparisonFmt="num0" comparisonDelta=false/>
+
+
+```sql top_artists_by_year
+    select
+        a.name as artist,
+        count(s.id) as scrobbles
+    from music.scrobbles s
+    join music.tracks t on s.track_id = t.id
+    join music.artists a on t.artist_id = a.id
+    where extract(year from s.ts_local) in ${inputs.year.value}
+    group by a.name
+    order by scrobbles desc
+    limit 10
+```
+
+```sql top_tracks_by_year
+    select
+        t.name as track,
+        count(s.id) as scrobbles
+    from music.scrobbles s
+    join music.tracks t on s.track_id = t.id
+    where extract(year from s.ts_local) in ${inputs.year.value}
+    group by t.name
+    order by scrobbles desc
+    limit 10
+```
+
+```sql top_albums_by_year
+    select
+        t.album_name as album,
+        count(s.id) as scrobbles
+    from music.scrobbles s
+    join music.tracks t on s.track_id = t.id
+    where extract(year from s.ts_local) in ${inputs.year.value}
+      and t.album_name is not null
+    group by t.album_name
+    order by scrobbles desc
+    limit 10
+```
+
+<BarChart
+    data={top_artists_by_year}
+    title="Top Artists by Year"
+    x=artist
+    y=scrobbles
+    swapXY=true
+/>
+
+<BarChart
+    data={top_tracks_by_year}
+    title="Top Tracks by Year"
+    x=track
+    y=scrobbles
+    swapXY=true
+/>
+
+<BarChart
+    data={top_albums_by_year}
+    title="Top Albums by Year"
+    x=album
+    y=scrobbles
+    swapXY=true
+/>
+
 
 ```sql top_missing_duration_tracks
     select
@@ -322,42 +403,30 @@ order by week
     order by scrobbles desc
 ```
 
-```sql daily_scrobbles_after_2024
+```sql daily_scrobbles
     select
         date_trunc('day', ts_local) as day,
         count(*) as scrobbles
     from music.scrobbles
-    where ts_local >= '2024-01-01'
+    where extract(year from ts_local) in ${inputs.year.value}
     group by day
     order by day desc
 ```
 
-<CalendarHeatmap data={daily_scrobbles_after_2024} date=day value=scrobbles title="Scrobbles by Day" />
+<CalendarHeatmap data={daily_scrobbles} date=day value=scrobbles title="Scrobbles by Day" filter=true />
 
-```sql daily_listen_time_after_2024
+```sql daily_listen_time
     select
         date_trunc('day', s.ts_local) as day,
         sum(t.duration_ms)/1000/60/60 as total_listen_time_hrs
     from music.scrobbles s
     join music.tracks t on s.track_id = t.id
-    where s.ts_local >= '2024-01-01'
+    where extract(year from s.ts_local) in ${inputs.year.value}
     group by day
     order by day desc
 ```
 
-<CalendarHeatmap data={daily_listen_time_after_2024} date=day value=total_listen_time_hrs title="Listening Time by Day" />
-
-## What's Next?
-
-- [Connect your data sources](settings)
-- Edit/add markdown files in the `pages` folder
-- Deploy your project with [Evidence Cloud](https://evidence.dev/cloud)
-
-## Get Support
-
-- Message us on [Slack](https://slack.evidence.dev/)
-- Read the [Docs](https://docs.evidence.dev/)
-- Open an issue on [Github](https://github.com/evidence-dev/evidence)
+<CalendarHeatmap data={daily_listen_time} date=day value=total_listen_time_hrs title="Listening Time by Day" filter=true />
 
 ```sql hours_of_day
 select
