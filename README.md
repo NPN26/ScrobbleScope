@@ -1,10 +1,10 @@
-# Spotify Streaming History Analysis
+# ScrobbleScope (A Last.fm Listening History Dashboard)
 
 > An automated analytics dashboard that turns personal Last.fm listening history into an interactive, queryable music intelligence product.
 
 <p align="center">
-  <a href="https://npn26.github.io/Spotify-Streaming-History-Analysis/">Live dashboard</a> ·
-  <a href="https://github.com/NPN26/Spotify-Streaming-History-Analysis/actions">Build history</a> ·
+  <a href="https://npn26.github.io/ScrobbleScope/">Live dashboard</a> ·
+  <a href="https://github.com/NPN26/ScrobbleScope/actions">Build history</a> ·
   <a href="music-dashboard/pages/index.md">Dashboard source</a>
 </p>
 
@@ -28,11 +28,11 @@ Calendar heatmaps expose seasonality and listening consistency at a glance. The 
 
 ![Dashboard calendar heatmaps for scrobbles and listening time](docs/assets/dashboard-heatmaps.png)
 
-[Open the live dashboard →](https://npn26.github.io/Spotify-Streaming-History-Analysis/)
+[Open the live dashboard →](https://npn26.github.io/ScrobbleScope/)
 
 ### Track-level exploration
 
-The [`Tracks` page](https://npn26.github.io/Spotify-Streaming-History-Analysis/tracks/) turns the ranked catalog into a drill-down experience. Visitors can search and paginate through all tracks, then open a track detail view with metadata, lifetime scrobbles, recent-period play counts and rank movement, first/last scrobble dates, daily history, hourly listening patterns, album context, and similar tracks.
+The [`Tracks` page](https://npn26.github.io/ScrobbleScope/tracks/) turns the ranked catalog into a drill-down experience. Visitors can search and paginate through all tracks, then open a track detail view with metadata, lifetime scrobbles, recent-period play counts and rank movement, first/last scrobble dates, daily history, hourly listening patterns, album context, and similar tracks.
 
 ![Track detail page with recent-period rankings, listening history, and polar hourly chart](docs/assets/track-detail.png)
 
@@ -92,8 +92,8 @@ The dashboard is built for exploratory questions rather than a single static rep
 The automated dashboard build requires Python, Node.js, DuckDB, and the Evidence CLI dependencies.
 
 ```bash
-git clone https://github.com/NPN26/Spotify-Streaming-History-Analysis.git
-cd Spotify-Streaming-History-Analysis
+git clone https://github.com/NPN26/ScrobbleScope.git
+cd ScrobbleScope
 
 # Install ingestion dependencies
 pip install -r requirements.txt

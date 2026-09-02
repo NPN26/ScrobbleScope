@@ -28,7 +28,7 @@ description: A dashboard to visualize my music listening history and statistics.
         messageType = "info";
         try {
             const resp = await fetch(
-                "https://api.github.com/repos/NPN26/Spotify-Streaming-History-Analysis/actions/workflows/deploy.yml/dispatches",
+                "https://api.github.com/repos/NPN26/ScrobbleScope/actions/workflows/deploy.yml/dispatches",
                 {
                     method: "POST",
                     headers: {
@@ -67,7 +67,7 @@ description: A dashboard to visualize my music listening history and statistics.
     >
         {loading ? "Triggering..." : "🔄 Update Data"}
     </button>
-    <a href="https://github.com/NPN26/Spotify-Streaming-History-Analysis/actions" target="_blank" style="margin-left: 12px; font-size: 13px; color: var(--blue-600);">View build progress →</a>
+    <a href="https://github.com/NPN26/ScrobbleScope/actions" target="_blank" style="margin-left: 12px; font-size: 13px; color: var(--blue-600);">View build progress →</a>
     {#if message}
         <p style="margin-top: 10px; font-size: 14px; font-weight: 500; color: {messageType === 'error' ? '#dc2626' : messageType === 'success' ? '#16a34a' : '#2563eb'};">{message}</p>
     {/if}

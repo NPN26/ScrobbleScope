@@ -83,4 +83,4 @@ plugins:
     "@evidence-dev/motherduck": { }
 
 deployment:
-  basePath: /Spotify-Streaming-History-Analysis
+  basePath: /ScrobbleScope
