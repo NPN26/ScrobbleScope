@@ -15,6 +15,13 @@ order by scrobbles desc
 
 ## All Tracks
 
+<DataTable data={all_tracks} link=link rows=20>
+    <Column id="track" title="Track" />
+    <Column id="artist" title="Artist" />
+    <Column id="album" title="Album" />
+    <Column id="scrobbles" title="Scrobbles" />
+</DataTable>
+
 ```sql track
 select 
     name,
@@ -38,7 +45,9 @@ select
 from ${all_tracks}
 where case
     when trim('${inputs.name_of_input}') = '' then true
-    else track ilike '%' || trim('${inputs.name_of_input}') || '%'
+    else track ilike '%' || trim('${inputs.name_of_input}') || '%' or
+         artist ilike '%' || trim('${inputs.name_of_input}') || '%' or
+         album ilike '%' || trim('${inputs.name_of_input}') || '%'
 end
 order by scrobbles desc
 limit 10

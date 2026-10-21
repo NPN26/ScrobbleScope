@@ -25,7 +25,7 @@ ranked_4w as (
     select
         id,
         play_count_4w,
-        dense_rank() over (
+        rank() over (
             order by play_count_4w desc
         ) as rank_4w
     from play_4w
@@ -35,7 +35,7 @@ prev_ranked_4w as (
     select
         id,
         prev_play_count_4w,
-        dense_rank() over (
+        rank() over (
             order by prev_play_count_4w desc
         ) as prev_rank_4w
     from prev_play_4w
@@ -68,7 +68,7 @@ ranked_6m as (
     select
         id,
         play_count_6m,
-        dense_rank() over (
+        rank() over (
             order by play_count_6m desc
         ) as rank_6m
     from play_6m
@@ -78,7 +78,7 @@ prev_ranked_6m as (
     select
         id,
         prev_play_count_6m,
-        dense_rank() over (
+        rank() over (
             order by prev_play_count_6m desc
         ) as prev_rank_6m
     from prev_play_6m
